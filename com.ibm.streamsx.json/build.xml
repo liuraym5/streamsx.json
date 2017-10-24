@@ -93,6 +93,14 @@
 			source="1.7" target="1.7"
 			excludes="com/ibm/streamsx/json/**/*$StreamsModel.java">
 			<classpath>
+				<pathelement path="${build.dir}"/>
+				<pathelement path="${lib.dir}"/>
+				<pathelement path="${src.dir}"/>
+				<pathelement path="${com.ibm.streamsx.json.DIR}"/>
+				<pathelement location="lib/gson-2.8.1.jar"/>
+				<pathelement location="lib/jackson-core-2.8.8.jar"/>
+				<pathelement location="lib/jackson-databind-2.9.0.pr3.jar"/>
+				<pathelement location="lib/jackson-module-afterburner-2.8.8.jar"/>
 				<path refid="cp.compile" />
 			</classpath>
 		</javac>

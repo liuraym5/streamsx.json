@@ -33,7 +33,7 @@ import com.ibm.streamsx.json.converters.TupleTypeVerifier;
 @InputPorts(@InputPortSet(cardinality=1, optional=false))
 @OutputPorts(@OutputPortSet(cardinality=1, optional=false))
 @PrimitiveOperator(name="TupleToJSON", description=TupleToJSON.DESC)
-@Libraries("lib/com.ibm.streamsx.json.converters.jar")
+@Libraries("lib/*")
 public class TupleToJSON extends AbstractOperator {
 
 	private String jsonStringAttribute = null;
@@ -44,6 +44,7 @@ public class TupleToJSON extends AbstractOperator {
 	private Type rootAttributeType =null;
 	
 	private static Logger l = Logger.getLogger(TupleToJSON.class.getCanonicalName());
+	//JsonNodeFactory nodeFactory = JsonNodeFactory.instance;
 
 	@Parameter(name=ROOT_ATTRIBUTE_PARAM,
 			optional = true,
@@ -107,9 +108,8 @@ public class TupleToJSON extends AbstractOperator {
 				jsonData = TupleToJSONConverter.convertArray(tuple, rootAttribute);
 		}
 		OutputTuple op = ops.newTuple();
-		op.assign(tuple);//copy over all relevant attributes form the source tuple
-        op.setString(jsonStringAttribute, jsonData);
-
+//		op.assign(tuple);//copy over all relevant attributes form the source tuple
+		op.setString(jsonStringAttribute, jsonData);
 		ops.submit(op);
 	}
 

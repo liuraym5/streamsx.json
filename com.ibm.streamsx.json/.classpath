@@ -3,5 +3,10 @@
 	<classpathentry kind="src" path="impl/java/src"/>
 	<classpathentry exported="true" kind="con" path="com.ibm.streams.java/com.ibm.streams.operator"/>
 	<classpathentry exported="true" kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry exported="true" kind="lib" path="lib/jackson-core-2.8.8.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-module-afterburner-2.8.8.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-databind-2.8.8.1.jar"/>
+	<classpathentry kind="lib" path="lib/jackson-annotations-2.8.0.jar"/>
+	<classpathentry kind="lib" path="lib/gson-2.8.1.jar"/>
 	<classpathentry kind="output" path="impl/java/bin"/>
 </classpath>
