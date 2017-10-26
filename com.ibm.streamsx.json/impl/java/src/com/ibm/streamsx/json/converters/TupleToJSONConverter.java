@@ -6,9 +6,12 @@ import java.math.BigDecimal;
 import java.text.MessageFormat;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Set;
+
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.ibm.streams.operator.Attribute;
+import com.ibm.streams.operator.StreamSchema;
 import com.ibm.streams.operator.Tuple;
 import com.ibm.streams.operator.Type;
 import com.ibm.streams.operator.meta.CollectionType;
@@ -38,7 +41,7 @@ public class TupleToJSONConverter {
 		writeTupleToOut(jGenerator, tuple);
 		jGenerator.writeEndObject();
 		jGenerator.close();
-		outputStreamSize = outputStream.size();
+		// outputStreamSize = outputStream.size();
 		return outputStream.toString("UTF-8");
 	}
 	
@@ -66,9 +69,22 @@ public class TupleToJSONConverter {
 	 * @throws IOException
 	 */
 	public static void writeTupleToOut(JsonGenerator jGenerator, Tuple tuple) throws IOException {
-        for (Attribute attr : tuple.getStreamSchema())
-        {	
-        	processAttributeObject(jGenerator, tuple, attr);
+        // for (Attribute attr : tuple.getStreamSchema())
+        // {	
+        //     processAttributeObject(jGenerator, tuple, attr);
+        //     Type attrType = attr.getType();
+        //     jsonObjectFromElement(jGenerator, attrType, tuple)
+        // }
+
+        StreamSchema schema = tuple.getStreamSchema();
+        for (int i=0; i<schema.getAttributeCount(); i++) {
+            Attribute attr = schema.getAttribute(i);
+            //Type attrType = schema.getAttribute(i).getType();
+            // jsonObjectFromElement(jGenerator, attrType, tuple.getObject(i, attrType));
+            // dont actually need to cast here
+            jGenerator.writeFieldName(attr.getName());
+            jsonObjectFromElement(jGenerator, attr.getType(), tuple.getObject(i));
+
         }
 	}
 	
@@ -79,9 +95,38 @@ public class TupleToJSONConverter {
 	 * @throws IOException
 	 */
 	public static void writeMapToOut(JsonGenerator jGenerator, MapType type, Map map) throws IOException {
-		for (Object k : map.keySet()) {
-			jsonObjectFromElement(jGenerator, type.getValueType(), k.toString(), map.get(k));
-		}
+        Type valueType = type.getValueType();
+        Type keyType = type.getKeyType();
+        switch (keyType.getMetaType()) {
+            // disallow key types that should not be Java
+            // keys since their toString() value is not a
+            // representation of the value
+            case XML:
+            case BLOB:
+            case TIMESTAMP:
+            case BLIST:
+            case LIST:
+            case MAP:
+            case BMAP:
+            case SET:
+            case BSET:
+            case COMPLEX32:
+            case COMPLEX64:
+            case TUPLE:
+                throw unsupported(type);
+        }
+//        for (Object k : map.keySet()) {
+//            jGenerator.writeFieldName(k.toString());
+//            // jsonObjectFromElement(jGenerator, typeInMap, k.toString(), map.get(k));
+//            jsonObjectFromElement(jGenerator, valueType, map.get(k));
+//        }
+        
+        // iterator version
+        Set<Map.Entry> entrySet = map.entrySet();
+        for (Map.Entry entry : entrySet) {
+        	jGenerator.writeFieldName(entry.getKey().toString());
+        	jsonObjectFromElement(jGenerator, valueType, entry.getValue());
+        }
 			
 	}
 	
@@ -101,178 +146,178 @@ public class TupleToJSONConverter {
 	
 	
 	
-    /**
-     * Writes objects to jGenerator's out stream.
-     * @param jGenerator
-     * @param tuple
-     * @param name
-     * @throws IOException
-     */
-    public static void processAttributeObject(JsonGenerator jGenerator, final Tuple tuple, final String name) throws IOException {
-        processAttributeObject(jGenerator, tuple, tuple.getStreamSchema().getAttribute(name));
-    }
+//    /**
+//     * Writes objects to jGenerator's out stream.
+//     * @param jGenerator
+//     * @param tuple
+//     * @param name
+//     * @throws IOException
+//     */
+//    public static void processAttributeObject(JsonGenerator jGenerator, final Tuple tuple, final String name) throws IOException {
+//        processAttributeObject(jGenerator, tuple, tuple.getStreamSchema().getAttribute(name));
+//    }
+//    
+//    
+//    public static void processAttributeObject(JsonGenerator jGenerator, final Tuple tuple, final Attribute attr) throws IOException {
+//    	//Object value;
+//    	//final int index = attr.getIndex();
+//    	final String attrName = attr.getName();
+//    	//value = tuple.getObject(attrName);
+//    	switch (attr.getType().getMetaType()) {
+//    	case BOOLEAN:
+//    		jGenerator.writeBooleanField(attrName, tuple.getBoolean(attrName));
+//    		break;
+//    	case INT8:
+//    		jGenerator.writeNumberField(attrName, tuple.getByte(attrName));
+//    		break;
+//    	case INT16:
+//    		jGenerator.writeNumberField(attrName, tuple.getShort(attrName));
+//    		break;
+//        case INT32:
+//        	jGenerator.writeNumberField(attrName, tuple.getInt(attrName));
+//        	break;
+//        case INT64:
+//        	jGenerator.writeNumberField(attrName, tuple.getLong(attrName));
+//        	break;
+//        case FLOAT32:
+//        	jGenerator.writeNumberField(attrName, tuple.getFloat(attrName));
+//        	break;
+//        case FLOAT64:
+//        	jGenerator.writeNumberField(attrName, tuple.getDouble(attrName));
+//        	break;
+//        case DECIMAL32:
+//        case DECIMAL64:
+//        case DECIMAL128:
+//        	jGenerator.writeNumberField(attrName, tuple.getBigDecimal(attrName));
+//        	break;
+//        case USTRING:
+//        case BSTRING:
+//        case ENUM:
+//            jGenerator.writeStringField(attrName, tuple.getString(attrName));
+//            break;
+//        case UINT8:
+//        case UINT16:
+//        	jGenerator.writeNumberField(attrName, tuple.getInt(attrName));
+//        	break;
+//        case UINT32:
+//            // Get the unsigned value
+//            jGenerator.writeNumberField(attrName, tuple.getLong(attrName));
+//            break;
+//        case UINT64:
+//            // Get the unsigned value
+//            jGenerator.writeNumberField(attrName, tuple.getBigDecimal(attrName));
+//            break;
+//        case RSTRING:
+//        	jGenerator.writeStringField(attrName, tuple.getString(attrName));
+//        	break;
+//        case TUPLE:
+//        	jGenerator.writeObjectFieldStart(attrName);
+//        	writeTupleToOut(jGenerator, tuple.getTuple(attrName));
+//        	jGenerator.writeEndObject();
+//            break;
+//        case TIMESTAMP:
+//            jGenerator.writeNumberField(attrName, tuple.getTimestamp(attrName).getTimeAsSeconds());
+//            break;
+//            
+//        case BMAP:
+//        case MAP:
+//        {
+//            MapType mt = (MapType) attr.getType();
+//            switch (mt.getKeyType().getMetaType()) {
+//            // disallow key types that should not be Java
+//            // keys since their toString() value is not a
+//            // representation of the value
+//            case XML:
+//            case BLOB:
+//            case TIMESTAMP:
+//            case BLIST:
+//            case LIST:
+//            case MAP:
+//            case BMAP:
+//            case SET:
+//            case BSET:
+//            case COMPLEX32:
+//            case COMPLEX64:
+//            case TUPLE:
+//                throw unsupported(mt);
+//            }
+//            jGenerator.writeObjectFieldStart(attrName);
+//            writeMapToOut(jGenerator, mt, tuple.getMap(attrName));
+//            jGenerator.writeEndObject();
+//            break;
+//        }
+//        case SET:
+//        case BSET:
+//        {
+//        	jGenerator.writeArrayFieldStart(attrName);
+//        	writeArrayToOut(jGenerator, (CollectionType) attr.getType(), (Collection) tuple.getSet(attrName));
+//            jGenerator.writeEndArray();
+//            break;
+//        }
+//        case LIST:
+//        case BLIST:
+//        {
+//        	jGenerator.writeArrayFieldStart(attrName);
+//        	writeArrayToOut(jGenerator, (CollectionType) attr.getType(), (Collection) tuple.getList(attrName));
+//            jGenerator.writeEndArray();
+//            break;
+//        }
+//        case XML:
+//        case BLOB:
+//		default:
+//			throw unsupported(attr.getType());
+//    		
+//    	}
+//    	
+//    }
     
-    
-    public static void processAttributeObject(JsonGenerator jGenerator, final Tuple tuple, final Attribute attr) throws IOException {
-    	//Object value;
-    	//final int index = attr.getIndex();
-    	final String attrName = attr.getName();
-    	//value = tuple.getObject(attrName);
-    	switch (attr.getType().getMetaType()) {
-    	case BOOLEAN:
-    		jGenerator.writeBooleanField(attrName, tuple.getBoolean(attrName));
-    		break;
-    	case INT8:
-    		jGenerator.writeNumberField(attrName, tuple.getByte(attrName));
-    		break;
-    	case INT16:
-    		jGenerator.writeNumberField(attrName, tuple.getShort(attrName));
-    		break;
-        case INT32:
-        	jGenerator.writeNumberField(attrName, tuple.getInt(attrName));
-        	break;
-        case INT64:
-        	jGenerator.writeNumberField(attrName, tuple.getLong(attrName));
-        	break;
-        case FLOAT32:
-        	jGenerator.writeNumberField(attrName, tuple.getFloat(attrName));
-        	break;
-        case FLOAT64:
-        	jGenerator.writeNumberField(attrName, tuple.getDouble(attrName));
-        	break;
-        case DECIMAL32:
-        case DECIMAL64:
-        case DECIMAL128:
-        	jGenerator.writeNumberField(attrName, tuple.getBigDecimal(attrName));
-        	break;
-        case USTRING:
-        case BSTRING:
-        case ENUM:
-            jGenerator.writeStringField(attrName, tuple.getString(attrName));
-            break;
-        case UINT8:
-        case UINT16:
-        	jGenerator.writeNumberField(attrName, tuple.getInt(attrName));
-        	break;
-        case UINT32:
-            // Get the unsigned value
-            jGenerator.writeNumberField(attrName, tuple.getLong(attrName));
-            break;
-        case UINT64:
-            // Get the unsigned value
-            jGenerator.writeNumberField(attrName, tuple.getBigDecimal(attrName));
-            break;
-        case RSTRING:
-        	jGenerator.writeStringField(attrName, tuple.getString(attrName));
-        	break;
-        case TUPLE:
-        	jGenerator.writeObjectFieldStart(attrName);
-        	writeTupleToOut(jGenerator, tuple.getTuple(attrName));
-        	jGenerator.writeEndObject();
-            break;
-        case TIMESTAMP:
-            jGenerator.writeNumberField(attrName, tuple.getTimestamp(attrName).getTimeAsSeconds());
-            break;
-            
-        case BMAP:
-        case MAP:
-        {
-            MapType mt = (MapType) attr.getType();
-            switch (mt.getKeyType().getMetaType()) {
-            // disallow key types that should not be Java
-            // keys since their toString() value is not a
-            // representation of the value
-            case XML:
-            case BLOB:
-            case TIMESTAMP:
-            case BLIST:
-            case LIST:
-            case MAP:
-            case BMAP:
-            case SET:
-            case BSET:
-            case COMPLEX32:
-            case COMPLEX64:
-            case TUPLE:
-                throw unsupported(mt);
-            }
-            jGenerator.writeObjectFieldStart(attrName);
-            writeMapToOut(jGenerator, mt, tuple.getMap(attrName));
-            jGenerator.writeEndObject();
-            break;
-        }
-        case SET:
-        case BSET:
-        {
-        	jGenerator.writeArrayFieldStart(attrName);
-        	writeArrayToOut(jGenerator, (CollectionType) attr.getType(), (Collection) tuple.getSet(attrName));
-            jGenerator.writeEndArray();
-            break;
-        }
-        case LIST:
-        case BLIST:
-        {
-        	jGenerator.writeArrayFieldStart(attrName);
-        	writeArrayToOut(jGenerator, (CollectionType) attr.getType(), (Collection) tuple.getList(attrName));
-            jGenerator.writeEndArray();
-            break;
-        }
-        case XML:
-        case BLOB:
-		default:
-			throw unsupported(attr.getType());
-    		
-    	}
-    	
-    }
-    
-    private static void jsonObjectFromElement(JsonGenerator jGenerator, Type elementType, String attrName, Object cv) throws IOException {
-        switch (elementType.getMetaType()) {
-        case XML:
-            throw unsupported(elementType);
-        case RSTRING:
-        case BSTRING:
-        	jGenerator.writeStringField(attrName, cv.toString());
-            break;
-        case MAP:
-        case BMAP:
-        	jGenerator.writeObjectFieldStart(attrName);
-        	writeMapToOut(jGenerator, (MapType) elementType, (Map) cv);
-        	jGenerator.writeEndObject();
-            break;
-        case SET:
-        case BSET:
-        case LIST:
-        case BLIST:
-        	jGenerator.writeArrayFieldStart(attrName);
-        	writeArrayToOut(jGenerator, (CollectionType) elementType, (Collection) cv);
-            jGenerator.writeEndArray();
-            break;
-        case TIMESTAMP:
-        	jGenerator.writeNumberField(attrName, ((Timestamp) cv).getTimeAsSeconds());
-        	break;
-        case TUPLE:
-        	jGenerator.writeObjectFieldStart(attrName);
-        	writeTupleToOut(jGenerator, (Tuple) cv);
-        	jGenerator.writeEndObject();
-            break;
-        case UINT8:
-        	jGenerator.writeNumberField(attrName, (((Byte) cv).intValue()) & 0xFF);
-        	break;
-        case UINT16:
-        	jGenerator.writeNumberField(attrName, (((Short) cv).intValue()) & 0xFFFF);
-        	break;
-        case UINT32:
-        	jGenerator.writeNumberField(attrName, (((Integer) cv).longValue()) & 0xFFFFFFFFL);
-        	break;
-        case UINT64:
-        	jGenerator.writeNumberField(attrName, new BigDecimal((Long) cv));
-            break;
-        default:
-        	jGenerator.writeObjectField(attrName, cv);
-        	break;
-        }
-    }
+    // private static void jsonObjectFromElement(JsonGenerator jGenerator, Type elementType, String attrName, Object cv) throws IOException {
+    //     switch (elementType.getMetaType()) {
+    //     case XML:
+    //         throw unsupported(elementType);
+    //     case RSTRING:
+    //     case BSTRING:
+    //     	jGenerator.writeStringField(attrName, cv.toString());
+    //         break;
+    //     case MAP:
+    //     case BMAP:
+    //     	jGenerator.writeObjectFieldStart(attrName);
+    //     	writeMapToOut(jGenerator, (MapType) elementType, (Map) cv);
+    //     	jGenerator.writeEndObject();
+    //         break;
+    //     case SET:
+    //     case BSET:
+    //     case LIST:
+    //     case BLIST:
+    //     	jGenerator.writeArrayFieldStart(attrName);
+    //     	writeArrayToOut(jGenerator, (CollectionType) elementType, (Collection) cv);
+    //         jGenerator.writeEndArray();
+    //         break;
+    //     case TIMESTAMP:
+    //     	jGenerator.writeNumberField(attrName, ((Timestamp) cv).getTimeAsSeconds());
+    //     	break;
+    //     case TUPLE:
+    //     	jGenerator.writeObjectFieldStart(attrName);
+    //     	writeTupleToOut(jGenerator, (Tuple) cv);
+    //     	jGenerator.writeEndObject();
+    //         break;
+    //     case UINT8:
+    //     	jGenerator.writeNumberField(attrName, (((Byte) cv).intValue()) & 0xFF);
+    //     	break;
+    //     case UINT16:
+    //     	jGenerator.writeNumberField(attrName, (((Short) cv).intValue()) & 0xFFFF);
+    //     	break;
+    //     case UINT32:
+    //     	jGenerator.writeNumberField(attrName, (((Integer) cv).longValue()) & 0xFFFFFFFFL);
+    //     	break;
+    //     case UINT64:
+    //     	jGenerator.writeNumberField(attrName, new BigDecimal((Long) cv));
+    //         break;
+    //     default:
+    //     	jGenerator.writeObjectField(attrName, cv);
+    //     	break;
+    //     }
+    // }
     
     private static void jsonObjectFromElement(JsonGenerator jGenerator, Type elementType, Object cv) throws IOException {
         switch (elementType.getMetaType()) {
